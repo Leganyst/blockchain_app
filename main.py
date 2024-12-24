@@ -8,10 +8,9 @@ from web3 import Web3
 from config import ADDRESS, PRIVATE_KEY, NETWORK_URL, SMART_CONTRACT_ADDRESS, SMART_CONTRACT_ABI
 from erc20_config import ERC20_ADDRESS, ERC20_ABI
 
-
-
 from web3 import Web3
 from eth_account import Account
+from datetime import datetime
 
 
 class InsuranceData:
@@ -41,67 +40,75 @@ class InsuranceData:
 
     def create_policy(self, policy_holder, premium, coverage, duration_type):
         try:
-            # Преобразовываем адрес пользователя в checksum-формат
+            
+            # Преобразование адреса в checksum-формат
             policy_holder_checksum = self.web3.to_checksum_address(policy_holder)
-
-            # Получаем текущий nonce
+            
+            # Получение nonce
             nonce = self.web3.eth.get_transaction_count(self.account.address, 'pending')
 
-            # Шаг 1: Авторизация токенов (approve)
+            # Авторизация токенов
             approval_tx = self.token.functions.approve(
-                self.contract_address,
-                int(premium)
+                self.contract_address, int(premium)
             ).build_transaction({
                 "from": self.account.address,
                 "nonce": nonce,
-                "gas": 5000000,
+                "gas": 3_000_000,
                 "gasPrice": self.get_gas_price()
             })
-
             signed_approval_tx = self.web3.eth.account.sign_transaction(approval_tx, self.private_key)
             approval_tx_hash = self.web3.eth.send_raw_transaction(signed_approval_tx.raw_transaction)
-            self.web3.eth.wait_for_transaction_receipt(approval_tx_hash)
+
+            # Ожидание подтверждения
+            approval_receipt = self.web3.eth.wait_for_transaction_receipt(approval_tx_hash)
+            if approval_receipt['status'] != 1:
+                print("Approval transaction failed.")
+                return None
             print(f"Approval transaction hash: {approval_tx_hash.hex()}")
 
-            # Проверяем, что токены успешно авторизованы
-            nonce += 1
+            # Проверка allowance
             allowance = self.token.functions.allowance(self.account.address, self.contract_address).call()
             if allowance < premium:
                 print("Allowance is less than the required premium.")
                 return None
 
-            # Проверяем баланс
+            # Проверка баланса
             balance = self.get_balance()
             if balance is None or balance < premium:
                 print("Insufficient balance.")
                 return None
 
-            gas_limit = self.contract.functions.createPolicy(
-                policy_holder_checksum, premium, coverage, duration_type
-            ).estimate_gas({
-                "from": self.web3.to_checksum_address(self.account.address)
-            })
+            # Расчёт газа для транзакции createPolicy
+            try:
+                gas_limit = self.contract.functions.createPolicy(
+                    policy_holder_checksum, premium, coverage, duration_type
+                ).estimate_gas({"from": self.account.address})
+            except Exception as e:
+                print(f"Gas estimation failed: {e}")
+                return None
             print(f"Estimated Gas: {gas_limit}")
-            
-            # Шаг 2: Создание полиса
+
+            # Создание полиса
+            nonce += 1
             transaction = self.contract.functions.createPolicy(
-                policy_holder_checksum,
-                premium,
-                coverage,
-                duration_type  # Используем стандартизированный тип продолжительности
+                policy_holder_checksum, premium, coverage, duration_type
             ).build_transaction({
                 "from": self.account.address,
                 "nonce": nonce,
-                "gas": 5000000,
+                "gas": 3_000_000,
                 "gasPrice": self.get_gas_price()
             })
-
             signed_tx = self.web3.eth.account.sign_transaction(transaction, self.private_key)
             tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+
+            # Ожидание подтверждения транзакции
             receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+            if receipt['status'] != 1:
+                print("Policy creation transaction failed.")
+                return None
             print(f"Transaction Receipt: {receipt}")
 
-            # Проверяем события Debug
+            # Проверка событий Debug
             logs = self.contract.events.Debug().process_receipt(receipt)
             for log in logs:
                 print(f"Debug Message: {log['args']['message']}")
@@ -111,6 +118,7 @@ class InsuranceData:
         except Exception as e:
             print(f"Failed to create policy: {e}")
             return None
+
 
     def get_user_policies(self, user):
         try:
@@ -183,15 +191,6 @@ class InsuranceData:
             print(f"Failed to fetch gas price: {e}")
             return self.web3.to_wei("10", "gwei")
 
-
-from PyQt5.QtWidgets import (
-    QMainWindow, QApplication, QVBoxLayout, QLineEdit, QPushButton, QLabel, 
-    QTableWidget, QTableWidgetItem, QMessageBox, QWidget
-)
-from datetime import datetime
-import sys
-
-# Вставить сюда InsuranceData и настройки для работы с блокчейном
 
 
 class InsuranceGUI(QMainWindow):

@@ -9,7 +9,7 @@ NETWORK_ID = 15
 
 
 # Данные основного контракта
-SMART_CONTRACT_ADDRESS = "0xc952F0877f7f8992b4Afd4d95b7EC4c2aB7F7f4E"
+SMART_CONTRACT_ADDRESS = "0x611a3F1D95B2855816Dd53c30bb81670c8aC800A"
 SMART_CONTRACT_ABI = [
 	{
 		"inputs": [],
@@ -142,7 +142,7 @@ SMART_CONTRACT_ABI = [
 		],
 		"name": "createPolicy",
 		"outputs": [],
-		"stateMutability": "payable",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{

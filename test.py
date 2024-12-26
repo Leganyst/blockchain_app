@@ -2,7 +2,7 @@ import json
 from eth_keyfile import extract_key_from_keyfile
 
 # Путь к вашему keystore-файлу
-keyfile_path = r"E:\geth_network\keystore\UTC--2024-12-22T20-01-46.565106400Z--add70f3aa1a6bff0f574c205083df15f189dc3e4"
+keyfile_path = r"E:\geth_network\keystore\UTC--2024-12-25T10-04-29.800657100Z--ec936f8b946a0baf7cfcf11b3b475a930c9ab396"
 
 # Введите пароль, который вы указали при создании аккаунта
 password = input("Введите пароль от аккаунта: ").encode()
